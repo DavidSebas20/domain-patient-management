@@ -1,4 +1,4 @@
-name: Sync ms-createpatient to Domain Repository
+name: Sync ms-deletepatient to Domain Repository
 on:
   push:
     branches:
@@ -49,9 +49,9 @@ jobs:
 
       - name: Copy microservice to domain repository
         run: |
-          rm -rf domain_repo/ms-createpatient
-          mkdir -p domain_repo/ms-createpatient
-          rsync -av --exclude='.git' . domain_repo/ms-createpatient/
+          rm -rf domain_repo/ms-deletepatient
+          mkdir -p domain_repo/ms-deletepatient
+          rsync -av --exclude='.git' . domain_repo/ms-deletepatient/
 
       - name: Commit and push changes
         run: |
