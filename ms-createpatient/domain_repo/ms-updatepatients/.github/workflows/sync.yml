@@ -1,4 +1,4 @@
-name: Sync ms-createpatient to Domain Repository
+name: Sync ms-updatepatients to Domain Repository
 on:
   push:
     branches:
@@ -12,7 +12,7 @@ jobs:
       - name: Checkout microservice repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0 
+          fetch-depth: 0 # Necesario para acceder al historial completo de commits
 
       - name: Get latest commit message
         id: commit_message
@@ -49,9 +49,9 @@ jobs:
 
       - name: Copy microservice to domain repository
         run: |
-          rm -rf domain_repo/ms-createpatient
-          mkdir -p domain_repo/ms-createpatient
-          rsync -av --exclude='.git' . domain_repo/ms-createpatient/
+          rm -rf domain_repo/ms-updatepatients
+          mkdir -p domain_repo/ms-updatepatients
+          rsync -av --exclude='.git' . domain_repo/ms-updatepatients/
 
       - name: Commit and push changes
         run: |
