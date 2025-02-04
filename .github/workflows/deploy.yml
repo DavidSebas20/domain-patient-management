@@ -130,7 +130,7 @@ jobs:
           # Clonar el repositorio en la instancia EC2
           if [ ! -d "/home/ubuntu/repo" ]; then
             echo "Cloning repository..."
-            git clone --branch ${{ github.ref_name }} https://github.com/DavidSebas20/domain-doctor-management.git /home/ubuntu/repo
+            git clone --branch ${{ github.ref_name }} https://github.com/DavidSebas20/domain-patient-management.git /home/ubuntu/repo
           else
             echo "Repository already cloned. Pulling latest changes..."
             cd /home/ubuntu/repo && git fetch origin && git checkout ${{ github.ref_name }} && git pull origin ${{ github.ref_name }}
@@ -169,7 +169,7 @@ jobs:
           # Crear archivo docker-compose.yml dinámicamente
           echo "version: '3'" > docker-compose.yml
           echo "services:" >> docker-compose.yml
-          port=8080
+          port=8000
           branch_name=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')
           for dir in $(ls -d */); do
             service_name=$(basename "$dir")
