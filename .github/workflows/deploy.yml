@@ -102,24 +102,6 @@ jobs:
                 DB_USERNAME: \${DB_USERNAME}
                 DB_PASSWORD: \${DB_PASSWORD}
                 PORT_READ_PATIENT: \${PORT_READ_PATIENT}
-            ms-updatepatient:
-              image: dssanguano/ms-updatepatients:\${branch_name}
-              ports:
-                - "\${PORT_UPDATE_PATIENT}:\${PORT_UPDATE_PATIENT}"
-              environment:
-                DB_URL: \${DB_URL}
-                DB_USERNAME: \${DB_USERNAME}
-                DB_PASSWORD: \${DB_PASSWORD}
-                PORT_UPDATE_PATIENT: \${PORT_UPDATE_PATIENT}
-            ms-deletepatient:
-              image: dssanguano/ms-deletepatients:\${branch_name}
-              ports:
-                - "\${PORT_DELETE_PATIENT}:\${PORT_DELETE_PATIENT}"
-              environment:
-                DB_URL: \${DB_URL}
-                DB_USERNAME: \${DB_USERNAME}
-                DB_PASSWORD: \${DB_PASSWORD}
-                PORT_DELETE_PATIENT: \${PORT_DELETE_PATIENT}
           EOL
 
           # Imprimir el contenido del archivo docker-compose.yml para depuración
