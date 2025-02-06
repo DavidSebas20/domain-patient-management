@@ -1,4 +1,4 @@
-name: Deploy Microservices on AWS with Incremental Ports
+name: Deploy Microservices from Docker Hub
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
       # Paso 3: Construir y subir las imágenes Docker para cada microservicio
       - name: Build and Push Docker Images
         run: |
-          branch_name=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')
+          branch_name=$(echo "${{ github.ref_name }}")
           for dir in $(ls -d */); do
             service_name=$(basename "$dir")
             echo "Building Docker image for $service_name..."
@@ -30,117 +30,22 @@ jobs:
             docker push dssanguano/${service_name}:${branch_name}
           done
 
-  deploy-qa:
-    if: github.ref_name == 'QA'
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      # Paso 4: Configurar clave SSH para QA
-      - name: Set up SSH key for QA
-        run: |
-          mkdir -p /home/runner/.ssh
-          echo "${{ secrets.QA_SSH_KEY }}" > /home/runner/.ssh/qa_key.pem
-          chmod 600 /home/runner/.ssh/qa_key.pem
-
-      # Paso 5: Desplegar en la instancia QA usando Docker Compose
-      - name: Deploy to QA Instance
-        run: |
-          ssh -o StrictHostKeyChecking=no -i /home/runner/.ssh/qa_key.pem ubuntu@ec2-3-86-241-78.compute-1.amazonaws.com << 'EOF'
-          # Clonar el repositorio en la instancia EC2
-          if [ ! -d "/home/ubuntu/repo" ]; then
-            echo "Cloning repository..."
-            git clone --branch ${{ github.ref_name }} https://github.com/DavidSebas20/domain-patient-management.git /home/ubuntu/repo
-          else
-            echo "Repository already cloned. Pulling latest changes..."
-            cd /home/ubuntu/repo && git fetch origin && git checkout ${{ github.ref_name }} && git pull origin ${{ github.ref_name }}
-          fi
-
-          # Diagnosticar el contenido del repositorio
-          echo "Contents of /home/ubuntu/repo:"
-          ls -la /home/ubuntu/repo
-
-          # Verificar e instalar Docker si no está instalado
-          if ! command -v docker &> /dev/null; then
-            echo "Docker no está instalado. Procediendo a instalar..."
-            sudo apt update
-            sudo apt install -y docker.io
-            sudo systemctl start docker
-            sudo systemctl enable docker
-            sudo usermod -aG docker ubuntu
-            echo "Docker instalado exitosamente."
-          else
-            echo "Docker ya está instalado."
-          fi
-
-          # Verificar e instalar Docker Compose si no está instalado
-          if ! command -v docker-compose &> /dev/null; then
-            echo "Docker Compose no está instalado. Procediendo a instalar..."
-            sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            echo "Docker Compose instalado exitosamente."
-          else
-            echo "Docker Compose ya está instalado."
-          fi
-
-          # Cambiar al directorio del repositorio
-          cd /home/ubuntu/repo
-
-          # Crear archivo docker-compose.yml dinámicamente
-          echo "version: '3'" > docker-compose.yml
-          echo "services:" >> docker-compose.yml
-          port=8000
-          branch_name=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')
-          for dir in $(ls -d */); do
-            service_name=$(basename "$dir")
-            echo "  $service_name:" >> docker-compose.yml
-            echo "    image: dssanguano/${service_name}:${branch_name}" >> docker-compose.yml
-            echo "    ports:" >> docker-compose.yml
-            echo "      - \"${port}:${port}\"" >> docker-compose.yml
-            port=$((port + 1))
-          done
-
-          # Imprimir el contenido del archivo docker-compose.yml para depuración
-          echo "Generated docker-compose.yml:"
-          cat docker-compose.yml
-
-          # Validar el archivo docker-compose.yml
-          docker-compose config || true
-
-          # Desplegar con Docker Compose
-          sudo docker-compose down || true
-          sudo docker-compose pull
-          sudo docker-compose up -d
-          EOF
-
   deploy-dev:
     if: github.ref_name == 'Dev'
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      # Paso 6: Configurar clave SSH para Dev
+      # Paso 1: Configurar SSH Key para Dev
       - name: Set up SSH key for Dev
         run: |
           mkdir -p /home/runner/.ssh
           echo "${{ secrets.DEV_SSH_KEY }}" > /home/runner/.ssh/main_key.pem
           chmod 600 /home/runner/.ssh/main_key.pem
 
-      # Paso 7: Desplegar en la instancia Dev usando Docker Compose
+      # Paso 2: Desplegar todos los microservicios usando el archivo docker-compose.yml
       - name: Deploy to Dev Instance
         run: |
-          ssh -o StrictHostKeyChecking=no -i /home/runner/.ssh/main_key.pem ubuntu@ec2-3-86-241-78.compute-1.amazonaws.com << 'EOF'
-          # Clonar el repositorio en la instancia EC2
-          if [ ! -d "/home/ubuntu/repo" ]; then
-            echo "Cloning repository..."
-            git clone --branch ${{ github.ref_name }} https://github.com/DavidSebas20/domain-patient-management.git /home/ubuntu/repo
-          else
-            echo "Repository already cloned. Pulling latest changes..."
-            cd /home/ubuntu/repo && git fetch origin && git checkout ${{ github.ref_name }} && git pull origin ${{ github.ref_name }}
-          fi
-
-          # Diagnosticar el contenido del repositorio
-          echo "Contents of /home/ubuntu/repo:"
-          ls -la /home/ubuntu/repo
-
+          ssh -o StrictHostKeyChecking=no -i /home/runner/.ssh/main_key.pem ubuntu@${{ secrets.HOST }} << EOF
           # Verificar e instalar Docker si no está instalado
           if ! command -v docker &> /dev/null; then
             echo "Docker no está instalado. Procediendo a instalar..."
@@ -164,22 +69,58 @@ jobs:
             echo "Docker Compose ya está instalado."
           fi
 
-          # Cambiar al directorio del repositorio
-          cd /home/ubuntu/repo
+          # Exportar variables de entorno para docker-compose
+          export branch_name="${{ github.ref_name}}"
+          export DB_URL="${{ secrets.DB_URL }}"
+          export DB_USERNAME="${{ secrets.DB_USERNAME }}"
+          export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
+          export PORT_CREATE_PATIENT="${{ secrets.PORT_CREATE_PATIENT }}"
+          export PORT_READ_PAITENT="${{ secrets.PORT_READ_PAITENT }}"
+          export PORT_UPDATE_PATIENT="${{ secrets.PORT_UPDATE_PATIENT }}"
+          export PORT_DELETE_PATIENT="${{ secrets.PORT_DELETE_PATIENT }}"
+          export host="${{ secrets.HOST }}"
 
-          # Crear archivo docker-compose.yml dinámicamente
-          echo "version: '3'" > docker-compose.yml
-          echo "services:" >> docker-compose.yml
-          port=8000
-          branch_name=$(echo "${{ github.ref_name }}" | tr '[:upper:]' '[:lower:]')
-          for dir in $(ls -d */); do
-            service_name=$(basename "$dir")
-            echo "  $service_name:" >> docker-compose.yml
-            echo "    image: dssanguano/${service_name}:${branch_name}" >> docker-compose.yml
-            echo "    ports:" >> docker-compose.yml
-            echo "      - \"${port}:${port}\"" >> docker-compose.yml
-            port=$((port + 1))
-          done
+          # Crear archivo docker-compose.yml estático
+          cat <<EOL > docker-compose.yml
+          version: '3'
+          services:
+            ms-createpatient:
+              image: dssanguano/ms-createpatient:\${branch_name}
+              ports:
+                - "\${PORT_CREATE_PATIENT}:\${PORT_CREATE_PATIENT}"
+              environment:
+                DB_URL: \${DB_URL}
+                DB_USERNAME: \${DB_USERNAME}
+                DB_PASSWORD: \${DB_PASSWORD}
+                PORT_CREATE_PATIENT: \${PORT_CREATE_PATIENT}
+            ms-readpatient:
+              image: dssanguano/ms-readpatient:\${branch_name}
+              ports:
+                - "\${PORT_READ_PATIENT}:\${PORT_READ_PATIENT}"
+              environment:
+                DB_URL: \${DB_URL}
+                DB_USERNAME: \${DB_USERNAME}
+                DB_PASSWORD: \${DB_PASSWORD}
+                PORT_READ_PATIENT: \${PORT_READ_PATIENT}
+            ms-updatepatient:
+              image: dssanguano/ms-updatepatient:\${branch_name}
+              ports:
+                - "\${PORT_UPDATE_PATIENT}:\${PORT_UPDATE_PATIENT}"
+              environment:
+                DB_URL: \${DB_URL}
+                DB_USERNAME: \${DB_USERNAME}
+                DB_PASSWORD: \${DB_PASSWORD}
+                PORT_UPDATE_PATIENT: \${PORT_UPDATE_PATIENT}
+            ms-deletepatient:
+              image: dssanguano/ms-deletepatient:\${branch_name}
+              ports:
+                - "\${PORT_DELETE_PATIENT}:\${PORT_DELETE_PATIENT}"
+              environment:
+                DB_URL: \${DB_URL}
+                DB_USERNAME: \${DB_USERNAME}
+                DB_PASSWORD: \${DB_PASSWORD}
+                PORT_DELETE_PATIENT: \${PORT_DELETE_PATIENT}
+          EOL
 
           # Imprimir el contenido del archivo docker-compose.yml para depuración
           echo "Generated docker-compose.yml:"
