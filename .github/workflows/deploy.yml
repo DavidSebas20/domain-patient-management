@@ -75,7 +75,7 @@ jobs:
           export DB_USERNAME="${{ secrets.DB_USERNAME }}"
           export DB_PASSWORD="${{ secrets.DB_PASSWORD }}"
           export PORT_CREATE_PATIENT="${{ secrets.PORT_CREATE_PATIENT }}"
-          export PORT_READ_PAITENT="${{ secrets.PORT_READ_PAITENT }}"
+          export PORT_READ_PATIENT="${{ secrets.PORT_READ_PATIENT }}"
           export PORT_UPDATE_PATIENT="${{ secrets.PORT_UPDATE_PATIENT }}"
           export PORT_DELETE_PATIENT="${{ secrets.PORT_DELETE_PATIENT }}"
           export host="${{ secrets.HOST }}"
@@ -94,7 +94,7 @@ jobs:
                 DB_PASSWORD: \${DB_PASSWORD}
                 PORT_CREATE_PATIENT: \${PORT_CREATE_PATIENT}
             ms-readpatient:
-              image: dssanguano/ms-readpatient:\${branch_name}
+              image: dssanguano/ms-readpatients:\${branch_name}
               ports:
                 - "\${PORT_READ_PATIENT}:\${PORT_READ_PATIENT}"
               environment:
@@ -103,7 +103,7 @@ jobs:
                 DB_PASSWORD: \${DB_PASSWORD}
                 PORT_READ_PATIENT: \${PORT_READ_PATIENT}
             ms-updatepatient:
-              image: dssanguano/ms-updatepatient:\${branch_name}
+              image: dssanguano/ms-updatepatients:\${branch_name}
               ports:
                 - "\${PORT_UPDATE_PATIENT}:\${PORT_UPDATE_PATIENT}"
               environment:
@@ -112,7 +112,7 @@ jobs:
                 DB_PASSWORD: \${DB_PASSWORD}
                 PORT_UPDATE_PATIENT: \${PORT_UPDATE_PATIENT}
             ms-deletepatient:
-              image: dssanguano/ms-deletepatient:\${branch_name}
+              image: dssanguano/ms-deletepatients:\${branch_name}
               ports:
                 - "\${PORT_DELETE_PATIENT}:\${PORT_DELETE_PATIENT}"
               environment:
