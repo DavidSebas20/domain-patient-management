@@ -1,6 +1,5 @@
 package com.example.readpatients.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
